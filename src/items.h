@@ -3,7 +3,9 @@
 
 #define ITEMS_SIZE (4)
 
-typedef enum item_names_t { WATER = 0, FOOD, FIREARMS, ROBOTS } item_names_t;
+enum item_index { WATER = 0, FOOD, FIREARMS, ROBOTS };
+
+const char *ITEM_NAMES[] = {"Water", "Food", "Firearms", "Robots"};
 
 typedef struct inventory_item_t {
   int amount;

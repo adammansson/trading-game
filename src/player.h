@@ -13,6 +13,8 @@ typedef struct player_t {
 
 player_t *new_player(location_t *starting_location);
 
+void print_inventory(player_t *player);
+
 void print_player(player_t *player);
 
 #endif /* PLAYER_H */

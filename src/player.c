@@ -18,12 +18,17 @@ player_t *new_player(location_t *starting_location) {
   return player;
 }
 
-void print_player(player_t *player) {
-  printf("Name: %s\nMoney: %i$\nCurrent location: %s (%i, %i)\nFuel: "
-         "%i\n\nInventory:\nWater: "
+void print_inventory(player_t *player) {
+  printf("Inventory:\nWater: "
          "%i\nFood: %i\nFirearms: %i\nRobots: %i\n",
-         player->name, player->money, player->location->name,
-         player->location->x, player->location->y, player->fuel,
          player->inventory[WATER].amount, player->inventory[FOOD].amount,
          player->inventory[FIREARMS].amount, player->inventory[ROBOTS].amount);
+}
+
+void print_player(player_t *player) {
+  printf("Name: %s\nMoney: %i$\nCurrent location: %s (%i, %i)\nFuel: "
+         "%i\n\n",
+         player->name, player->money, player->location->name,
+         player->location->x, player->location->y, player->fuel);
+  print_inventory(player);
 }

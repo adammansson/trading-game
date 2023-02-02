@@ -19,6 +19,7 @@ location_t **new_world_map() {
   location_t **map;
 
   map = calloc(MAP_SIZE * sizeof(location_t), sizeof(location_t));
+
   map[0] = new_location("Earth", 0, 0);
   map[1] = new_location("The moon", 1, 0);
   map[2] = new_location("Mars", 3, 1);
@@ -26,6 +27,7 @@ location_t **new_world_map() {
   map[4] = new_location("Mercury", 8, 3);
   map[5] = new_location("Jupiter", 2, 9);
   map[6] = new_location("The sun", 11, 4);
+
   return map;
 }
 

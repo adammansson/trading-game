@@ -1,6 +1,7 @@
-#include "location.h"
+#include "items.h"
 #define _POSIX_C_SOURCE 200809L
 
+#include "location.h"
 #include "player.h"
 
 #include <stddef.h>
@@ -52,6 +53,13 @@ void print_map(location_t **locations, int size) {
   }
 }
 
+void print_commands() {
+  printf(
+      "Commands:\n'.exit'\n'.status'\n'.map'\n'.market'\n'goto'\n'refuel'\n");
+}
+
+#define STR_EQUALS(str) strcmp(str, input_buffer->buffer) == 0
+
 void goto_destination(input_buffer_t *input_buffer, player_t *player,
                       location_t **locations, int size) {
   int dest;
@@ -63,7 +71,7 @@ void goto_destination(input_buffer_t *input_buffer, player_t *player,
 
   dest = (int)strtol(input_buffer->buffer, (char **)NULL, 10);
 
-  if (dest < 0 || dest > 6) {
+  if (dest < 0 || dest > MAP_SIZE - 1) {
     printf("Illegal index '%s'.\n", input_buffer->buffer);
     return;
   }
@@ -91,33 +99,108 @@ void goto_destination(input_buffer_t *input_buffer, player_t *player,
 }
 
 void refuel_ship(input_buffer_t *input_buffer, player_t *player) {
-  int fuel_amount, money;
+  int fuel_amount, money_needed;
 
   printf("Current fuel: %i litres.\nHow much fuel to buy: ", player->fuel);
   read_input(input_buffer);
 
   fuel_amount = (int)strtol(input_buffer->buffer, (char **)NULL, 10);
-  if (0 > fuel_amount || fuel_amount > 100) {
+  if (fuel_amount < 0 || fuel_amount > 100) {
     printf("Illegal amount '%s'.\n", input_buffer->buffer);
     return;
   }
-  money = fuel_amount;
+  money_needed = 5 * fuel_amount;
 
-  if (money < player->money) {
-    player->money -= money;
-    player->fuel += fuel_amount;
-    printf("Bought %i litres of fuel for %i$.\n", fuel_amount, money);
+  if (money_needed > player->money) {
+    printf(
+        "Not enough money to buy this amount of fuel, need at least %i$, have "
+        "%i.\n",
+        money_needed, player->money);
     return;
   }
-  printf("Not enough money to buy this amount of fuel.\n");
+  player->money -= money_needed;
+  player->fuel += fuel_amount;
+  printf("Bought %i litres of fuel for %i$.\n", fuel_amount, money_needed);
 }
 
-void print_commands() {
-  printf(
-      "Commands:\n'.exit'\n'.status'\n'.map'\n'.market'\n'goto'\n'refuel'\n");
+void buy_items(input_buffer_t *input_buffer, player_t *player) {
+  int i, item_to_buy, amount_to_buy, money_needed;
+
+  printf("Buying:\n");
+  print_inventory(player);
+  printf("\nMarket:\n");
+  for (i = 0; i < ITEMS_SIZE; i++) {
+    printf("%i %s %i$\n", i, ITEM_NAMES[i],
+           player->location->market[i].buy_price);
+  }
+  printf("Which item to buy: ");
+  read_input(input_buffer);
+
+  item_to_buy = (int)strtol(input_buffer->buffer, (char **)NULL, 10);
+  if (item_to_buy < 0 || item_to_buy > ITEMS_SIZE - 1) {
+    printf("Illegal index '%s'.\n", input_buffer->buffer);
+    return;
+  }
+
+  printf("How many instances to buy: ");
+  read_input(input_buffer);
+
+  amount_to_buy = (int)strtol(input_buffer->buffer, (char **)NULL, 10);
+  money_needed =
+      player->location->market[item_to_buy].buy_price * amount_to_buy;
+  if (money_needed > player->money) {
+    printf("Not enough money to buy these items, need at least %i$, have "
+           "%i.\n",
+           money_needed, player->money);
+    return;
+  }
+  player->money -= money_needed;
+  player->inventory[item_to_buy].amount += amount_to_buy;
+  printf("Bought %i of %s for %i$.\n", amount_to_buy, ITEM_NAMES[item_to_buy],
+         money_needed);
 }
 
-#define STR_EQUALS(str) strcmp(str, input_buffer->buffer) == 0
+void sell_items(input_buffer_t *input_buffer, player_t *player) {
+  int i, item_to_sell, amount_to_sell, money_gained;
+
+  printf("Selling:\n");
+
+  for (i = 0; i < ITEMS_SIZE; i++) {
+    printf("%i %s %i\n", i, ITEM_NAMES[i], player->inventory[i].amount);
+  }
+
+  printf("\nMarket:\n");
+  for (i = 0; i < ITEMS_SIZE; i++) {
+    printf("%s %i$\n", ITEM_NAMES[i], player->location->market[i].sell_price);
+  }
+  printf("Which item to sell: ");
+  read_input(input_buffer);
+
+  item_to_sell = (int)strtol(input_buffer->buffer, (char **)NULL, 10);
+  if (item_to_sell < 0 || item_to_sell > ITEMS_SIZE - 1) {
+    printf("Illegal index '%s'.\n", input_buffer->buffer);
+    return;
+  }
+
+  printf("How many instances to sell: ");
+  read_input(input_buffer);
+
+  amount_to_sell = (int)strtol(input_buffer->buffer, (char **)NULL, 10);
+  if (amount_to_sell > player->inventory[item_to_sell].amount) {
+    printf("Not enough items to sell, need %i$, have "
+           "%i.\n",
+           amount_to_sell, player->inventory[item_to_sell].amount);
+    return;
+  }
+
+  money_gained =
+      player->location->market[item_to_sell].sell_price * amount_to_sell;
+
+  player->money += money_gained;
+  player->inventory[item_to_sell].amount -= amount_to_sell;
+  printf("Sold %i of %s for %i$.\n", amount_to_sell, ITEM_NAMES[item_to_sell],
+         money_gained);
+}
 
 int main(void) {
   input_buffer_t *input_buffer;
@@ -153,6 +236,12 @@ int main(void) {
       continue;
     } else if (STR_EQUALS("refuel")) {
       refuel_ship(input_buffer, player);
+      continue;
+    } else if (STR_EQUALS("buy")) {
+      buy_items(input_buffer, player);
+      continue;
+    } else if (STR_EQUALS("sell")) {
+      sell_items(input_buffer, player);
       continue;
     } else {
       printf("Unrecognized command '%s'.\n", input_buffer->buffer);
