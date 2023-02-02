@@ -1,5 +1,5 @@
 #include "player.h"
-#include "inventory.h"
+
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,17 +12,18 @@ player_t *new_player(location_t *starting_location) {
   player->name = "Arthur Dent";
   player->money = 1000;
   player->location = starting_location;
-  memset(player->inventory, 0, 4 * sizeof(item_t));
-  player->fuel_amount = 0;
+  memset(player->inventory, 0, ITEMS_SIZE * sizeof(item_t));
+  player->fuel = 0;
 
   return player;
 }
 
 void print_player(player_t *player) {
-  printf(
-      "Name: %s\nMoney: %i$\nCurrent location: %s (%i, %i)\nFuel: %i\nWater: "
-      "%i\nFood: %i\n",
-      player->name, player->money, player->location->name, player->location->x,
-      player->location->y, player->fuel_amount, player->inventory[WATER].amount,
-      player->inventory[FOOD].amount);
+  printf("Name: %s\nMoney: %i$\nCurrent location: %s (%i, %i)\nFuel: "
+         "%i\n\nInventory:\nWater: "
+         "%i\nFood: %i\nFirearms: %i\nRobots: %i\n",
+         player->name, player->money, player->location->name,
+         player->location->x, player->location->y, player->fuel,
+         player->inventory[WATER].amount, player->inventory[FOOD].amount,
+         player->inventory[FIREARMS].amount, player->inventory[ROBOTS].amount);
 }

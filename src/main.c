@@ -1,8 +1,8 @@
+#include "location.h"
 #define _POSIX_C_SOURCE 200809L
 
-#include "item.h"
-#include "location.h"
 #include "player.h"
+
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,29 +54,49 @@ void print_map(location_t **locations, int size) {
 
 void goto_destination(input_buffer_t *input_buffer, player_t *player,
                       location_t **locations, int size) {
-  int destination;
+  int dest;
 
   print_map(locations, size);
 
   printf("Go to destination: ");
   read_input(input_buffer);
 
-  destination = atoi(input_buffer->buffer);
-  if (destination < 0 || destination > 6) {
-    printf("Illegal destination '%s'.\n", input_buffer->buffer);
+  dest = (int)strtol(input_buffer->buffer, (char **)NULL, 10);
+
+  if (dest < 0 || dest > 6) {
+    printf("Illegal index '%s'.\n", input_buffer->buffer);
     return;
   }
-  player->location = locations[destination];
-  printf("Traveling to %s.\n", locations[destination]->name);
+
+  if (locations[dest] == player->location) {
+    printf("You can't travel to your current location.\n");
+    return;
+  }
+
+  int fuel_needed = 5 * manhattan_distance(player->location, locations[dest]);
+
+  if (fuel_needed > player->fuel) {
+    printf("You don't have enough fuel for this journey, need at least %i "
+           "litres, have %i.\n",
+           fuel_needed, player->fuel);
+    return;
+  }
+  player->fuel -= fuel_needed;
+
+  simulate_market(player->location->market);
+  player->location = locations[dest];
+  simulate_market(player->location->market);
+
+  printf("Arrived at %s.\n", locations[dest]->name);
 }
 
 void refuel_ship(input_buffer_t *input_buffer, player_t *player) {
   int fuel_amount, money;
 
-  printf("How much fuel to buy: ");
+  printf("Current fuel: %i litres.\nHow much fuel to buy: ", player->fuel);
   read_input(input_buffer);
 
-  fuel_amount = atoi(input_buffer->buffer);
+  fuel_amount = (int)strtol(input_buffer->buffer, (char **)NULL, 10);
   if (0 > fuel_amount || fuel_amount > 100) {
     printf("Illegal amount '%s'.\n", input_buffer->buffer);
     return;
@@ -85,20 +105,19 @@ void refuel_ship(input_buffer_t *input_buffer, player_t *player) {
 
   if (money < player->money) {
     player->money -= money;
-    player->fuel_amount += fuel_amount;
+    player->fuel += fuel_amount;
     printf("Bought %i litres of fuel for %i$.\n", fuel_amount, money);
-  } else {
-    printf("Not enough money to buy this amount of fuel.\n");
+    return;
   }
+  printf("Not enough money to buy this amount of fuel.\n");
 }
 
-void print_market(player_t *player) {
-  int *market;
-
-  market = player->location->market;
-  printf("Water: %i\nFood: %i\nFirearms: %i\nRobots: %i\n", market[WATER],
-         market[FOOD], market[FIREARMS], market[ROBOTS]);
+void print_commands() {
+  printf(
+      "Commands:\n'.exit'\n'.status'\n'.map'\n'.market'\n'goto'\n'refuel'\n");
 }
+
+#define STR_EQUALS(str) strcmp(str, input_buffer->buffer) == 0
 
 int main(void) {
   input_buffer_t *input_buffer;
@@ -115,22 +134,25 @@ int main(void) {
     printf("> ");
     read_input(input_buffer);
 
-    if (strcmp(".exit", input_buffer->buffer) == 0) {
+    if (STR_EQUALS(".exit")) {
       exit(EXIT_SUCCESS);
-    } else if (strcmp(".status", input_buffer->buffer) == 0) {
+    } else if (STR_EQUALS(".status")) {
       print_player(player);
       continue;
-    } else if (strcmp(".map", input_buffer->buffer) == 0) {
-      print_map(world_map, 7);
+    } else if (STR_EQUALS(".map")) {
+      print_map(world_map, MAP_SIZE);
       continue;
-    } else if (strcmp("goto", input_buffer->buffer) == 0) {
+    } else if (STR_EQUALS(".market")) {
+      print_market(player->location);
+      continue;
+    } else if (STR_EQUALS(".commands")) {
+      print_commands();
+      continue;
+    } else if (STR_EQUALS("goto")) {
       goto_destination(input_buffer, player, world_map, 7);
       continue;
-    } else if (strcmp("refuel", input_buffer->buffer) == 0) {
+    } else if (STR_EQUALS("refuel")) {
       refuel_ship(input_buffer, player);
-      continue;
-    } else if (strcmp("market", input_buffer->buffer) == 0) {
-      print_market(player);
       continue;
     } else {
       printf("Unrecognized command '%s'.\n", input_buffer->buffer);
