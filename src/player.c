@@ -1,9 +1,21 @@
 #include "player.h"
+#include "location.h"
 
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+void populate_inventory(inventory_item_t *inventory) {
+  int i;
+  char *item_names[] = {"Water", "Food", "Firearms", "Robots"};
+
+  for (i = 0; i < ITEMS_SIZE; i++) {
+    inventory[i].name = item_names[i];
+    inventory[i].amount = 0;
+    inventory[i].purchase_price = 0;
+  }
+}
 
 player_t *new_player(location_t *starting_location) {
   player_t *player;
@@ -12,23 +24,20 @@ player_t *new_player(location_t *starting_location) {
   player->name = "Arthur Dent";
   player->money = 1000;
   player->location = starting_location;
-  memset(player->inventory, 0, ITEMS_SIZE * sizeof(item_t));
+  populate_inventory(player->inventory);
   player->fuel = 0;
 
   return player;
 }
 
-void print_inventory(player_t *player) {
-  printf("Inventory:\nWater: "
-         "%i\nFood: %i\nFirearms: %i\nRobots: %i\n",
-         player->inventory[WATER].amount, player->inventory[FOOD].amount,
-         player->inventory[FIREARMS].amount, player->inventory[ROBOTS].amount);
-}
-
 void print_player(player_t *player) {
   printf("Name: %s\nMoney: %i$\nCurrent location: %s (%i, %i)\nFuel: "
-         "%i\n\n",
+         "%i litres\n",
          player->name, player->money, player->location->name,
          player->location->x, player->location->y, player->fuel);
-  print_inventory(player);
+}
+
+void free_player(player_t *player) {
+  free(player->name);
+  free(player);
 }

@@ -1,7 +1,6 @@
-#include "items.h"
+#include "location.h"
 #define _POSIX_C_SOURCE 200809L
 
-#include "location.h"
 #include "player.h"
 
 #include <stddef.h>
@@ -44,10 +43,26 @@ void read_input(input_buffer_t *input_buffer) {
   input_buffer->buffer[bytes_read - 1] = '\0';
 }
 
-void print_map(location_t **locations, int size) {
-  int i;
+void print_map(location_t **locations) {
+  int x, y, i, planet_found;
 
-  for (i = 0; i < size; ++i) {
+  for (y = 0; y < 10; y++) {
+    for (x = 0; x < 10; x++) {
+      planet_found = 0;
+      for (i = 0; i < MAP_SIZE; ++i) {
+        if (locations[i]->x == x && locations[i]->y == y) {
+          putc('0' + i, stdout);
+          planet_found = 1;
+        }
+      }
+      if (planet_found == 0) {
+        putc(' ', stdout);
+      }
+    }
+    putc('\n', stdout);
+  }
+
+  for (i = 0; i < MAP_SIZE; ++i) {
     printf("%i: %s (%i, %i)\n", i, locations[i]->name, locations[i]->x,
            locations[i]->y);
   }
@@ -61,10 +76,10 @@ void print_commands() {
 #define STR_EQUALS(str) strcmp(str, input_buffer->buffer) == 0
 
 void goto_destination(input_buffer_t *input_buffer, player_t *player,
-                      location_t **locations, int size) {
+                      location_t **locations) {
   int dest;
 
-  print_map(locations, size);
+  print_map(locations);
 
   printf("Go to destination: ");
   read_input(input_buffer);
@@ -127,12 +142,14 @@ void buy_items(input_buffer_t *input_buffer, player_t *player) {
   int i, item_to_buy, amount_to_buy, money_needed;
 
   printf("Buying:\n");
-  print_inventory(player);
-  printf("\nMarket:\n");
+
+  printf("Inventory:\n");
   for (i = 0; i < ITEMS_SIZE; i++) {
-    printf("%i %s %i$\n", i, ITEM_NAMES[i],
-           player->location->market[i].buy_price);
+    printf("%s %i\n", player->inventory[i].name, player->inventory[i].amount);
   }
+
+  print_market(player->location->market);
+
   printf("Which item to buy: ");
   read_input(input_buffer);
 
@@ -146,8 +163,15 @@ void buy_items(input_buffer_t *input_buffer, player_t *player) {
   read_input(input_buffer);
 
   amount_to_buy = (int)strtol(input_buffer->buffer, (char **)NULL, 10);
+
+  if (amount_to_buy < 1) {
+    printf("You need to buy at least 1 item.\n");
+    return;
+  }
+
   money_needed =
       player->location->market[item_to_buy].buy_price * amount_to_buy;
+
   if (money_needed > player->money) {
     printf("Not enough money to buy these items, need at least %i$, have "
            "%i.\n",
@@ -156,7 +180,7 @@ void buy_items(input_buffer_t *input_buffer, player_t *player) {
   }
   player->money -= money_needed;
   player->inventory[item_to_buy].amount += amount_to_buy;
-  printf("Bought %i of %s for %i$.\n", amount_to_buy, ITEM_NAMES[item_to_buy],
+  printf("Bought %i of %s for %i$.\n", amount_to_buy, player->inventory[i].name,
          money_needed);
 }
 
@@ -165,14 +189,14 @@ void sell_items(input_buffer_t *input_buffer, player_t *player) {
 
   printf("Selling:\n");
 
+  printf("Inventory:\n");
   for (i = 0; i < ITEMS_SIZE; i++) {
-    printf("%i %s %i\n", i, ITEM_NAMES[i], player->inventory[i].amount);
+    printf("%i %s %i\n", i, player->inventory[i].name,
+           player->inventory[i].amount);
   }
 
-  printf("\nMarket:\n");
-  for (i = 0; i < ITEMS_SIZE; i++) {
-    printf("%s %i$\n", ITEM_NAMES[i], player->location->market[i].sell_price);
-  }
+  print_market(player->location->market);
+
   printf("Which item to sell: ");
   read_input(input_buffer);
 
@@ -186,6 +210,12 @@ void sell_items(input_buffer_t *input_buffer, player_t *player) {
   read_input(input_buffer);
 
   amount_to_sell = (int)strtol(input_buffer->buffer, (char **)NULL, 10);
+
+  if (amount_to_sell < 1) {
+    printf("You need to sell at least 1 item.\n");
+    return;
+  }
+
   if (amount_to_sell > player->inventory[item_to_sell].amount) {
     printf("Not enough items to sell, need %i$, have "
            "%i.\n",
@@ -198,11 +228,12 @@ void sell_items(input_buffer_t *input_buffer, player_t *player) {
 
   player->money += money_gained;
   player->inventory[item_to_sell].amount -= amount_to_sell;
-  printf("Sold %i of %s for %i$.\n", amount_to_sell, ITEM_NAMES[item_to_sell],
+  printf("Sold %i of %s for %i$.\n", amount_to_sell, player->inventory[i].name,
          money_gained);
 }
 
 int main(void) {
+  int i;
   input_buffer_t *input_buffer;
   player_t *player;
   location_t **world_map;
@@ -223,16 +254,16 @@ int main(void) {
       print_player(player);
       continue;
     } else if (STR_EQUALS(".map")) {
-      print_map(world_map, MAP_SIZE);
+      print_map(world_map);
       continue;
     } else if (STR_EQUALS(".market")) {
-      print_market(player->location);
+      print_market(player->location->market);
       continue;
     } else if (STR_EQUALS(".commands")) {
       print_commands();
       continue;
     } else if (STR_EQUALS("goto")) {
-      goto_destination(input_buffer, player, world_map, 7);
+      goto_destination(input_buffer, player, world_map);
       continue;
     } else if (STR_EQUALS("refuel")) {
       refuel_ship(input_buffer, player);
@@ -246,5 +277,11 @@ int main(void) {
     } else {
       printf("Unrecognized command '%s'.\n", input_buffer->buffer);
     }
+  }
+
+  close_input_buffer(input_buffer);
+  free_player(player);
+  for (i = 0; i < MAP_SIZE; i++) {
+    free_location(world_map[i]);
   }
 }
