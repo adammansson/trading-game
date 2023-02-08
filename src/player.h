@@ -2,18 +2,21 @@
 #define PLAYER_H
 
 #include "location.h"
+#include "ship.h"
 
 typedef struct player_t {
   char *name;
   int money;
   location_t *location;
-  inventory_item_t inventory[ITEMS_SIZE];
-  int fuel;
+  int inventory[NUM_TRADE_GOODS];
+  ship_t *ship;
 } player_t;
 
-void populate_inventory(inventory_item_t *inventory);
+void populate_inventory(int *inventory);
 
-player_t *new_player(location_t *starting_location);
+void print_inventory(int *inventory);
+
+player_t *new_player(location_t *starting_location, ship_t *starting_ship);
 
 void print_player(player_t *player);
 

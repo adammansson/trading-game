@@ -8,21 +8,21 @@
 typedef struct location_t {
   char *name;
   int x, y;
-  market_item_t market[ITEMS_SIZE];
+  trade_good_t market[NUM_TRADE_GOODS];
 } location_t;
 
-void populate_market(market_item_t *market);
+void populate_market(trade_good_t *market);
+
+void simulate_market(trade_good_t *market);
 
 location_t *new_location(char *name, int x, int y);
 
-location_t **new_world_map();
+void free_location(location_t *location);
 
-void simulate_market(market_item_t *market);
+void print_map(location_t **locations);
 
-void print_market(market_item_t *market);
+void print_market(trade_good_t *market);
 
 int manhattan_distance(location_t *curr, location_t *dest);
-
-void free_location(location_t *location);
 
 #endif /* LOCATION_H */
