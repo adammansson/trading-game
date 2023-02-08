@@ -247,4 +247,7 @@ int main(void) {
   for (i = 0; i < MAP_SIZE; i++) {
     free_location(world_map[i]);
   }
+  for (i = 0; i < SHIPS_SIZE; i++) {
+    free_ship(ship_catalog[i]);
+  }
 }
