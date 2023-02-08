@@ -68,25 +68,26 @@ void goto_destination(input_buffer_t *input_buffer, player_t *player,
 
   int fuel_needed = 5 * manhattan_distance(player->location, locations[dest]);
 
-  if (fuel_needed > player->inventory[FUEL]) {
+  if (fuel_needed > player->ship->storage[FUEL]) {
     printf("You don't have enough fuel for this journey, need at least %i "
            "litres, have %i.\n",
-           fuel_needed, player->inventory[FUEL]);
+           fuel_needed, player->ship->storage[FUEL]);
     return;
   }
-  player->inventory[FUEL] -= fuel_needed;
+  player->ship->storage[FUEL] -= fuel_needed;
 
   simulate_market(player->location->market);
   player->location = locations[dest];
   simulate_market(player->location->market);
 
-  printf("Arrived at %s.\n", locations[dest]->name);
+  printf("Arrived at %s, the journey cost %i litres of fuel.\n",
+         locations[dest]->name, player->ship->storage[FUEL]);
 }
 
 void buy_items(input_buffer_t *input_buffer, player_t *player) {
   int item_to_buy, amount_to_buy, money_needed;
 
-  print_inventory(player->inventory);
+  print_storage(player->ship->storage);
 
   print_market(player->location->market);
 
@@ -109,6 +110,15 @@ void buy_items(input_buffer_t *input_buffer, player_t *player) {
   if (amount_to_buy < 1) {
     printf("You need to buy at least 1 item.\n");
     return;
+  } else if (item_to_buy == FUEL && (player->ship->storage[FUEL] +
+                                     amount_to_buy) > player->ship->max_fuel) {
+    printf("You can't buy this much %s.\n", TRADE_GOOD_NAMES[FUEL]);
+    return;
+  } else if (item_to_buy != FUEL &&
+             (player->ship->storage[item_to_buy] + amount_to_buy) >
+                 player->ship->max_storage) {
+    printf("You can't buy this much %s.\n", TRADE_GOOD_NAMES[item_to_buy]);
+    return;
   }
 
   money_needed =
@@ -121,7 +131,7 @@ void buy_items(input_buffer_t *input_buffer, player_t *player) {
     return;
   }
   player->money -= money_needed;
-  player->inventory[item_to_buy] += amount_to_buy;
+  player->ship->storage[item_to_buy] += amount_to_buy;
   printf("Bought %i of %s for %i$.\n", amount_to_buy,
          TRADE_GOOD_NAMES[item_to_buy], money_needed);
 }
@@ -131,7 +141,7 @@ void sell_items(input_buffer_t *input_buffer, player_t *player) {
 
   print_market(player->location->market);
 
-  print_inventory(player->inventory);
+  print_storage(player->ship->storage);
 
   printf("Which item to sell: ");
   read_input(input_buffer);
@@ -154,10 +164,10 @@ void sell_items(input_buffer_t *input_buffer, player_t *player) {
     return;
   }
 
-  if (amount_to_sell > player->inventory[item_to_sell]) {
+  if (amount_to_sell > player->ship->storage[item_to_sell]) {
     printf("Not enough items to sell, need %i$, have "
            "%i.\n",
-           amount_to_sell, player->inventory[item_to_sell]);
+           amount_to_sell, player->ship->storage[item_to_sell]);
     return;
   }
 
@@ -165,7 +175,7 @@ void sell_items(input_buffer_t *input_buffer, player_t *player) {
       player->location->market[item_to_sell].sell_price * amount_to_sell;
 
   player->money += money_gained;
-  player->inventory[item_to_sell] -= amount_to_sell;
+  player->ship->storage[item_to_sell] -= amount_to_sell;
   printf("Sold %i of %s for %i$.\n", amount_to_sell,
          TRADE_GOOD_NAMES[item_to_sell], money_gained);
 }

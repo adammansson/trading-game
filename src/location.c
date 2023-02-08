@@ -10,7 +10,7 @@ static int rand_in_range(int lower, int upper) {
 void populate_market(trade_good_t *market) {
   int i, rand_num;
 
-  // FUEL = 0
+  // price of fuel is constant
   market[FUEL].buy_price = 10;
   market[FUEL].sell_price = 5;
 
